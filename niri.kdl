@@ -1,4 +1,4 @@
-spawn-at-startup "noctalia"
+// spawn-at-startup "noctalia"
 layer-rule {
     match namespace="^noctalia-backdrop"
     place-within-backdrop true
@@ -670,4 +670,4 @@ blur {
     off
 }
 
-include "noctalia.kdl"
+// include "noctalia.kdl"
