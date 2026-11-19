@@ -1,0 +1,825 @@
+=== INTERFACES ===
+lo               UNKNOWN        127.0.0.1/8 
+enp3s0           DOWN           
+wlan0            UP             192.168.0.8/24 
+tun2             UNKNOWN        10.33.0.2/24 
+=== ROUTING ===
+0.0.0.0/1 via 10.33.0.2 dev tun2 scope link 
+default via 192.168.0.1 dev wlan0 proto dhcp src 192.168.0.8 metric 20600 
+8.8.4.4 via 10.33.0.2 dev tun2 scope link 
+10.33.0.0/24 dev tun2 proto kernel scope link src 10.33.0.2 
+X via 192.168.0.1 dev wlan0 
+X via 192.168.0.1 dev wlan0 
+X via 192.168.0.1 dev wlan0 
+X via 192.168.0.1 dev wlan0 
+X via 192.168.0.1 dev wlan0 
+X via 192.168.0.1 dev wlan0 
+100.64.0.1 via 10.33.0.2 dev tun2 scope link 
+X via 192.168.0.1 dev wlan0 
+128.0.0.0/1 via 10.33.0.2 dev tun2 scope link 
+X via 192.168.0.1 dev wlan0 
+X via 192.168.0.1 dev wlan0 
+192.168.0.0/24 dev wlan0 proto kernel scope link src 192.168.0.8 metric 600 
+=== LISTENING PORTS ===
+[sudo] password for stock: 
+Netid  State   Recv-Q  Send-Q   Local Address:Port    Peer Address:Port Process                                     
+udp    UNCONN  0       0            127.0.0.1:48313        0.0.0.0:*     users:(("AmneziaVPN-serv",pid=636,fd=30))  
+udp    UNCONN  0       0            127.0.0.1:40719        0.0.0.0:*     users:(("AmneziaVPN-serv",pid=636,fd=28))  
+udp    UNCONN  0       0           127.0.0.54:53           0.0.0.0:*     users:(("systemd-resolve",pid=4911,fd=23)) 
+udp    UNCONN  0       0        127.0.0.53%lo:53           0.0.0.0:*     users:(("systemd-resolve",pid=4911,fd=21)) 
+udp    UNCONN  0       0              0.0.0.0:5353         0.0.0.0:*     users:(("systemd-resolve",pid=4911,fd=15)) 
+udp    UNCONN  0       0              0.0.0.0:5353         0.0.0.0:*     users:(("avahi-daemon",pid=557,fd=12))     
+udp    UNCONN  0       0              0.0.0.0:5355         0.0.0.0:*     users:(("systemd-resolve",pid=4911,fd=13)) 
+udp    UNCONN  0       0                    *:32816              *:*     users:(("tun2socks",pid=4295,fd=14))       
+udp    UNCONN  0       0                    *:53643              *:*     users:(("tun2socks",pid=4295,fd=12))       
+udp    UNCONN  0       0                 [::]:5353            [::]:*     users:(("avahi-daemon",pid=557,fd=13))     
+tcp    LISTEN  0       4096         127.0.0.1:631          0.0.0.0:*     users:(("cupsd",pid=637,fd=8))             
+tcp    LISTEN  0       4096        127.0.0.54:53           0.0.0.0:*     users:(("systemd-resolve",pid=4911,fd=24)) 
+tcp    LISTEN  0       4096           0.0.0.0:5355         0.0.0.0:*     users:(("systemd-resolve",pid=4911,fd=14)) 
+tcp    LISTEN  0       4096     127.0.0.53%lo:53           0.0.0.0:*     users:(("systemd-resolve",pid=4911,fd=22)) 
+tcp    LISTEN  0       4096         127.0.0.1:44695        0.0.0.0:*     users:(("AmneziaVPN-serv",pid=636,fd=13))  
+tcp    LISTEN  0       4096             [::1]:631             [::]:*     users:(("cupsd",pid=637,fd=7))             
+=== FIREWALL ===
+# Warning: table ip filter is managed by iptables-nft, do not touch!
+table ip filter {
+	chain ufw-before-logging-input {
+	}
+
+	chain ufw-before-logging-output {
+	}
+
+	chain ufw-before-logging-forward {
+	}
+
+	chain ufw-before-input {
+		iifname "lo" counter packets 308679 bytes 811618201 accept
+		xt match "conntrack" counter packets 987157 bytes 1633840245 accept
+		xt match "conntrack" counter packets 22 bytes 988 jump ufw-logging-deny
+		xt match "conntrack" counter packets 22 bytes 988 drop
+		ip protocol icmp xt match "icmp" counter packets 0 bytes 0 accept
+		ip protocol icmp xt match "icmp" counter packets 0 bytes 0 accept
+		ip protocol icmp xt match "icmp" counter packets 0 bytes 0 accept
+		ip protocol icmp xt match "icmp" counter packets 0 bytes 0 accept
+		udp sport 67 udp dport 68 counter packets 21 bytes 12096 accept
+		counter packets 7799 bytes 784872 jump ufw-not-local
+		ip daddr X udp dport 5353 counter packets 2949 bytes 501142 accept
+		ip daddr X udp dport 1900 counter packets 0 bytes 0 accept
+		counter packets 4850 bytes 283730 jump ufw-user-input
+	}
+
+	chain ufw-before-output {
+		oifname "lo" counter packets 31 bytes 3400 accept
+		xt match "conntrack" counter packets 3775 bytes 935364 accept
+		counter packets 281 bytes 83137 jump ufw-user-output
+	}
+
+	chain ufw-before-forward {
+		xt match "conntrack" counter packets 0 bytes 0 accept
+		ip protocol icmp xt match "icmp" counter packets 0 bytes 0 accept
+		ip protocol icmp xt match "icmp" counter packets 0 bytes 0 accept
+		ip protocol icmp xt match "icmp" counter packets 0 bytes 0 accept
+		ip protocol icmp xt match "icmp" counter packets 0 bytes 0 accept
+		counter packets 0 bytes 0 jump ufw-user-forward
+	}
+
+	chain ufw-after-input {
+		udp dport 137 counter packets 16 bytes 1536 jump ufw-skip-to-policy-input
+		udp dport 138 counter packets 0 bytes 0 jump ufw-skip-to-policy-input
+		tcp dport 139 counter packets 0 bytes 0 jump ufw-skip-to-policy-input
+		tcp dport 445 counter packets 0 bytes 0 jump ufw-skip-to-policy-input
+		udp dport 67 counter packets 23 bytes 8628 jump ufw-skip-to-policy-input
+		udp dport 68 counter packets 0 bytes 0 jump ufw-skip-to-policy-input
+		xt match "addrtype" counter packets 3701 bytes 233163 jump ufw-skip-to-policy-input
+	}
+
+	chain ufw-after-output {
+	}
+
+	chain ufw-after-forward {
+	}
+
+	chain ufw-after-logging-input {
+		limit rate 3/minute burst 10 packets counter packets 815 bytes 27983 xt target "LOG"
+	}
+
+	chain ufw-after-logging-output {
+	}
+
+	chain ufw-after-logging-forward {
+		limit rate 3/minute burst 10 packets counter packets 0 bytes 0 xt target "LOG"
+	}
+
+	chain ufw-reject-input {
+	}
+
+	chain ufw-reject-output {
+	}
+
+	chain ufw-reject-forward {
+	}
+
+	chain ufw-track-input {
+	}
+
+	chain ufw-track-output {
+		ip protocol tcp xt match "conntrack" counter packets 107 bytes 7052 accept
+		ip protocol udp xt match "conntrack" counter packets 160 bytes 75273 accept
+	}
+
+	chain ufw-track-forward {
+	}
+
+	chain INPUT {
+		type filter hook input priority filter; policy drop;
+		counter packets 1303678 bytes 2446256402 jump ufw-before-logging-input
+		counter packets 1303678 bytes 2446256402 jump ufw-before-input
+		counter packets 4850 bytes 283730 jump ufw-after-input
+		counter packets 1110 bytes 40403 jump ufw-after-logging-input
+		counter packets 1110 bytes 40403 jump ufw-reject-input
+		counter packets 1110 bytes 40403 jump ufw-track-input
+	}
+
+	chain OUTPUT {
+		type filter hook output priority filter; policy accept;
+		counter packets 825237 bytes 898134410 jump amnvpn.anchors
+		counter packets 4087 bytes 1021901 jump ufw-before-logging-output
+		counter packets 4087 bytes 1021901 jump ufw-before-output
+		counter packets 281 bytes 83137 jump ufw-after-output
+		counter packets 281 bytes 83137 jump ufw-after-logging-output
+		counter packets 281 bytes 83137 jump ufw-reject-output
+		counter packets 281 bytes 83137 jump ufw-track-output
+	}
+
+	chain FORWARD {
+		type filter hook forward priority filter; policy drop;
+		counter packets 0 bytes 0 jump ufw-before-logging-forward
+		counter packets 0 bytes 0 jump ufw-before-forward
+		counter packets 0 bytes 0 jump ufw-after-forward
+		counter packets 0 bytes 0 jump ufw-after-logging-forward
+		counter packets 0 bytes 0 jump ufw-reject-forward
+		counter packets 0 bytes 0 jump ufw-track-forward
+	}
+
+	chain ufw-logging-deny {
+		xt match "conntrack" limit rate 3/minute burst 10 packets counter packets 22 bytes 988 return
+		limit rate 3/minute burst 10 packets counter packets 0 bytes 0 xt target "LOG"
+	}
+
+	chain ufw-logging-allow {
+		limit rate 3/minute burst 10 packets counter packets 0 bytes 0 xt target "LOG"
+	}
+
+	chain ufw-skip-to-policy-input {
+		counter packets 3740 bytes 243327 drop
+	}
+
+	chain ufw-skip-to-policy-output {
+		counter packets 0 bytes 0 accept
+	}
+
+	chain ufw-skip-to-policy-forward {
+		counter packets 0 bytes 0 drop
+	}
+
+	chain ufw-not-local {
+		xt match "addrtype" counter packets 117 bytes 8363 return
+		xt match "addrtype" counter packets 3942 bytes 533182 return
+		xt match "addrtype" counter packets 3740 bytes 243327 return
+		limit rate 3/minute burst 10 packets counter packets 0 bytes 0 jump ufw-logging-deny
+		counter packets 0 bytes 0 drop
+	}
+
+	chain ufw-user-input {
+	}
+
+	chain ufw-user-output {
+	}
+
+	chain ufw-user-forward {
+	}
+
+	chain ufw-user-logging-input {
+	}
+
+	chain ufw-user-logging-output {
+	}
+
+	chain ufw-user-logging-forward {
+	}
+
+	chain ufw-user-limit {
+		limit rate 3/minute burst 5 packets counter packets 0 bytes 0 xt target "LOG"
+		counter packets 0 bytes 0 xt target "REJECT"
+	}
+
+	chain ufw-user-limit-accept {
+		counter packets 0 bytes 0 accept
+	}
+
+	chain amnvpn.anchors {
+		counter packets 825237 bytes 898134410 jump amnvpn.a.000.allowLoopback
+		counter packets 516829 bytes 86532113 jump amnvpn.a.320.allowDNS
+		counter packets 515563 bytes 86440703 jump amnvpn.a.310.blockDNS
+		counter packets 512155 bytes 86203847 jump amnvpn.a.300.allowLAN
+		counter packets 512118 bytes 86199642 jump amnvpn.a.290.allowDHCP
+		counter packets 512118 bytes 86199642 jump amnvpn.a.200.allowVPN
+		counter packets 259811 bytes 51759065 jump amnvpn.a.130.allowMarkedXray
+		counter packets 88 bytes 5116 jump amnvpn.a.120.blockNets
+		counter packets 88 bytes 5116 jump amnvpn.a.110.allowNets
+		counter packets 72 bytes 4476 jump amnvpn.a.400.allowPIA
+		counter packets 72 bytes 4476 jump amnvpn.a.100.blockAll
+	}
+
+	chain amnvpn.a.000.allowLoopback {
+		counter packets 825237 bytes 898134410 jump amnvpn.000.allowLoopback
+	}
+
+	chain amnvpn.000.allowLoopback {
+		oifname "lo*" counter packets 308408 bytes 811602297 accept
+	}
+
+	chain amnvpn.a.320.allowDNS {
+		counter packets 516827 bytes 86531849 jump amnvpn.320.allowDNS
+	}
+
+	chain amnvpn.320.allowDNS {
+		ip daddr 100.64.0.1 oifname "amn0*" udp dport 53 counter packets 0 bytes 0 accept
+		ip daddr 100.64.0.1 oifname "amn0*" tcp dport 53 counter packets 0 bytes 0 accept
+		ip daddr 100.64.0.1 oifname "tun0*" udp dport 53 counter packets 0 bytes 0 accept
+		ip daddr 100.64.0.1 oifname "tun0*" tcp dport 53 counter packets 0 bytes 0 accept
+		ip daddr 100.64.0.1 oifname "tun2*" udp dport 53 counter packets 508 bytes 38048 accept
+		ip daddr 100.64.0.1 oifname "tun2*" tcp dport 53 counter packets 0 bytes 0 accept
+		ip daddr 8.8.4.4 oifname "amn0*" udp dport 53 counter packets 0 bytes 0 accept
+		ip daddr 8.8.4.4 oifname "amn0*" tcp dport 53 counter packets 0 bytes 0 accept
+		ip daddr 8.8.4.4 oifname "tun0*" udp dport 53 counter packets 0 bytes 0 accept
+		ip daddr 8.8.4.4 oifname "tun0*" tcp dport 53 counter packets 0 bytes 0 accept
+		ip daddr 8.8.4.4 oifname "tun2*" udp dport 53 counter packets 758 bytes 53362 accept
+		ip daddr 8.8.4.4 oifname "tun2*" tcp dport 53 counter packets 0 bytes 0 accept
+		ip daddr 127.0.0.1 oifname "amn0*" udp dport 53 counter packets 0 bytes 0 accept
+		ip daddr 127.0.0.1 oifname "amn0*" tcp dport 53 counter packets 0 bytes 0 accept
+		ip daddr 127.0.0.1 oifname "tun0*" udp dport 53 counter packets 0 bytes 0 accept
+		ip daddr 127.0.0.1 oifname "tun0*" tcp dport 53 counter packets 0 bytes 0 accept
+		ip daddr 127.0.0.1 oifname "tun2*" udp dport 53 counter packets 0 bytes 0 accept
+		ip daddr 127.0.0.1 oifname "tun2*" tcp dport 53 counter packets 0 bytes 0 accept
+		ip daddr 127.0.0.53 oifname "amn0*" udp dport 53 counter packets 0 bytes 0 accept
+		ip daddr 127.0.0.53 oifname "amn0*" tcp dport 53 counter packets 0 bytes 0 accept
+		ip daddr 127.0.0.53 oifname "tun0*" udp dport 53 counter packets 0 bytes 0 accept
+		ip daddr 127.0.0.53 oifname "tun0*" tcp dport 53 counter packets 0 bytes 0 accept
+		ip daddr 127.0.0.53 oifname "tun2*" udp dport 53 counter packets 0 bytes 0 accept
+		ip daddr 127.0.0.53 oifname "tun2*" tcp dport 53 counter packets 0 bytes 0 accept
+	}
+
+	chain amnvpn.a.310.blockDNS {
+		counter packets 515562 bytes 86440487 jump amnvpn.310.blockDNS
+	}
+
+	chain amnvpn.310.blockDNS {
+		udp dport 53 counter packets 1704 bytes 127800 xt target "REJECT"
+		tcp dport 53 counter packets 1704 bytes 109056 xt target "REJECT"
+	}
+
+	chain amnvpn.a.300.allowLAN {
+		counter packets 512154 bytes 86203631 jump amnvpn.300.allowLAN
+	}
+
+	chain amnvpn.300.allowLAN {
+		ip daddr 10.0.0.0/8 counter packets 0 bytes 0 accept
+		ip daddr 169.254.0.0/16 counter packets 0 bytes 0 accept
+		ip daddr 172.16.0.0/12 counter packets 0 bytes 0 accept
+		ip daddr 192.168.0.0/16 counter packets 6 bytes 1884 accept
+		ip daddr 224.0.0.0/4 counter packets 31 bytes 2321 accept
+		ip daddr 255.255.255.255 counter packets 0 bytes 0 accept
+	}
+
+	chain amnvpn.a.290.allowDHCP {
+		counter packets 512117 bytes 86199426 jump amnvpn.290.allowDHCP
+	}
+
+	chain amnvpn.290.allowDHCP {
+		ip daddr 255.255.255.255 udp sport 68 udp dport 67 counter packets 0 bytes 0 accept
+	}
+
+	chain amnvpn.a.200.allowVPN {
+		counter packets 512117 bytes 86199426 jump amnvpn.200.allowVPN
+	}
+
+	chain amnvpn.200.allowVPN {
+		oifname "amn0*" counter packets 0 bytes 0 accept
+		oifname "tun0*" counter packets 0 bytes 0 accept
+		oifname "tun2*" counter packets 252307 bytes 34440577 accept
+	}
+
+	chain amnvpn.a.130.allowMarkedXray {
+		counter packets 259810 bytes 51758849 jump amnvpn.130.allowMarkedXray
+	}
+
+	chain amnvpn.130.allowMarkedXray {
+		meta mark 0x00000082 counter packets 259723 bytes 51753949 accept
+	}
+
+	chain amnvpn.a.120.blockNets {
+	}
+
+	chain amnvpn.120.blockNets {
+	}
+
+	chain amnvpn.a.110.allowNets {
+		counter packets 87 bytes 4900 jump amnvpn.110.allowNets
+	}
+
+	chain amnvpn.110.allowNets {
+		ip daddr X counter packets 16 bytes 640 accept
+		ip daddr X counter packets 0 bytes 0 accept
+		ip daddr X counter packets 0 bytes 0 accept
+		ip daddr X counter packets 0 bytes 0 accept
+		ip daddr X counter packets 0 bytes 0 accept
+		ip daddr X counter packets 0 bytes 0 accept
+		ip daddr X counter packets 0 bytes 0 accept
+		ip daddr X counter packets 0 bytes 0 accept
+		ip daddr X counter packets 0 bytes 0 accept
+	}
+
+	chain amnvpn.a.400.allowPIA {
+		counter packets 71 bytes 4260 jump amnvpn.400.allowPIA
+	}
+
+	chain amnvpn.400.allowPIA {
+	}
+
+	chain amnvpn.a.100.blockAll {
+		counter packets 71 bytes 4260 jump amnvpn.100.blockAll
+	}
+
+	chain amnvpn.100.blockAll {
+		counter packets 71 bytes 4260 xt target "REJECT"
+	}
+}
+# Warning: table ip6 filter is managed by iptables-nft, do not touch!
+table ip6 filter {
+	chain ufw6-before-logging-input {
+	}
+
+	chain ufw6-before-logging-output {
+	}
+
+	chain ufw6-before-logging-forward {
+	}
+
+	chain ufw6-before-input {
+		iifname "lo" counter packets 2 bytes 152 accept
+		xt match "rt" counter packets 0 bytes 0 drop
+		xt match "conntrack" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" counter packets 0 bytes 0 accept
+		xt match "conntrack" counter packets 0 bytes 0 jump ufw6-logging-deny
+		xt match "conntrack" counter packets 0 bytes 0 drop
+		meta l4proto ipv6-icmp xt match "icmp6" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" xt match "hl" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" xt match "hl" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" xt match "hl" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" xt match "hl" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" xt match "hl" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" xt match "hl" counter packets 0 bytes 0 accept
+		ip6 saddr fe80::/10 meta l4proto ipv6-icmp xt match "icmp6" counter packets 0 bytes 0 accept
+		ip6 saddr fe80::/10 meta l4proto ipv6-icmp xt match "icmp6" counter packets 0 bytes 0 accept
+		ip6 saddr fe80::/10 meta l4proto ipv6-icmp xt match "icmp6" counter packets 0 bytes 0 accept
+		ip6 saddr fe80::/10 meta l4proto ipv6-icmp xt match "icmp6" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" xt match "hl" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" xt match "hl" counter packets 0 bytes 0 accept
+		ip6 saddr fe80::/10 meta l4proto ipv6-icmp xt match "icmp6" xt match "hl" counter packets 0 bytes 0 accept
+		ip6 saddr fe80::/10 meta l4proto ipv6-icmp xt match "icmp6" xt match "hl" counter packets 0 bytes 0 accept
+		ip6 saddr fe80::/10 meta l4proto ipv6-icmp xt match "icmp6" xt match "hl" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" counter packets 0 bytes 0 accept
+		ip6 saddr fe80::/10 ip6 daddr fe80::/10 udp sport 547 udp dport 546 counter packets 0 bytes 0 accept
+		ip6 daddr ff02::fb udp dport 5353 counter packets 588 bytes 152415 accept
+		ip6 daddr ff02::f udp dport 1900 counter packets 0 bytes 0 accept
+		counter packets 9 bytes 666 jump ufw6-user-input
+	}
+
+	chain ufw6-before-output {
+		oifname "lo" counter packets 2 bytes 152 accept
+		xt match "rt" counter packets 0 bytes 0 drop
+		xt match "conntrack" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" xt match "hl" counter packets 11 bytes 528 accept
+		meta l4proto ipv6-icmp xt match "icmp6" xt match "hl" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" xt match "hl" counter packets 1 bytes 72 accept
+		meta l4proto ipv6-icmp xt match "icmp6" xt match "hl" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" xt match "hl" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" xt match "hl" counter packets 0 bytes 0 accept
+		ip6 saddr fe80::/10 meta l4proto ipv6-icmp xt match "icmp6" counter packets 0 bytes 0 accept
+		ip6 saddr fe80::/10 meta l4proto ipv6-icmp xt match "icmp6" counter packets 0 bytes 0 accept
+		ip6 saddr fe80::/10 meta l4proto ipv6-icmp xt match "icmp6" counter packets 0 bytes 0 accept
+		ip6 saddr fe80::/10 meta l4proto ipv6-icmp xt match "icmp6" counter packets 6 bytes 576 accept
+		meta l4proto ipv6-icmp xt match "icmp6" xt match "hl" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" xt match "hl" counter packets 0 bytes 0 accept
+		ip6 saddr fe80::/10 meta l4proto ipv6-icmp xt match "icmp6" xt match "hl" counter packets 0 bytes 0 accept
+		ip6 saddr fe80::/10 meta l4proto ipv6-icmp xt match "icmp6" xt match "hl" counter packets 0 bytes 0 accept
+		ip6 saddr fe80::/10 meta l4proto ipv6-icmp xt match "icmp6" xt match "hl" counter packets 0 bytes 0 accept
+		counter packets 26 bytes 3572 jump ufw6-user-output
+	}
+
+	chain ufw6-before-forward {
+		xt match "rt" counter packets 0 bytes 0 drop
+		xt match "conntrack" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp xt match "icmp6" counter packets 0 bytes 0 accept
+		counter packets 0 bytes 0 jump ufw6-user-forward
+	}
+
+	chain ufw6-after-input {
+		udp dport 137 counter packets 0 bytes 0 jump ufw6-skip-to-policy-input
+		udp dport 138 counter packets 0 bytes 0 jump ufw6-skip-to-policy-input
+		tcp dport 139 counter packets 0 bytes 0 jump ufw6-skip-to-policy-input
+		tcp dport 445 counter packets 0 bytes 0 jump ufw6-skip-to-policy-input
+		udp dport 546 counter packets 0 bytes 0 jump ufw6-skip-to-policy-input
+		udp dport 547 counter packets 0 bytes 0 jump ufw6-skip-to-policy-input
+	}
+
+	chain ufw6-after-output {
+	}
+
+	chain ufw6-after-forward {
+	}
+
+	chain ufw6-after-logging-input {
+		limit rate 3/minute burst 10 packets counter packets 9 bytes 666 xt target "LOG"
+	}
+
+	chain ufw6-after-logging-output {
+	}
+
+	chain ufw6-after-logging-forward {
+		limit rate 3/minute burst 10 packets counter packets 0 bytes 0 xt target "LOG"
+	}
+
+	chain ufw6-reject-input {
+	}
+
+	chain ufw6-reject-output {
+	}
+
+	chain ufw6-reject-forward {
+	}
+
+	chain ufw6-track-input {
+	}
+
+	chain ufw6-track-output {
+		meta l4proto tcp xt match "conntrack" counter packets 0 bytes 0 accept
+		meta l4proto udp xt match "conntrack" counter packets 24 bytes 3420 accept
+	}
+
+	chain ufw6-track-forward {
+	}
+
+	chain INPUT {
+		type filter hook input priority filter; policy drop;
+		counter packets 599 bytes 153233 jump ufw6-before-logging-input
+		counter packets 599 bytes 153233 jump ufw6-before-input
+		counter packets 9 bytes 666 jump ufw6-after-input
+		counter packets 9 bytes 666 jump ufw6-after-logging-input
+		counter packets 9 bytes 666 jump ufw6-reject-input
+		counter packets 9 bytes 666 jump ufw6-track-input
+	}
+
+	chain OUTPUT {
+		type filter hook output priority filter; policy accept;
+		counter packets 8 bytes 1072 jump amnvpn.anchors
+		counter packets 46 bytes 4900 jump ufw6-before-logging-output
+		counter packets 46 bytes 4900 jump ufw6-before-output
+		counter packets 26 bytes 3572 jump ufw6-after-output
+		counter packets 26 bytes 3572 jump ufw6-after-logging-output
+		counter packets 26 bytes 3572 jump ufw6-reject-output
+		counter packets 26 bytes 3572 jump ufw6-track-output
+	}
+
+	chain FORWARD {
+		type filter hook forward priority filter; policy drop;
+		counter packets 0 bytes 0 jump ufw6-before-logging-forward
+		counter packets 0 bytes 0 jump ufw6-before-forward
+		counter packets 0 bytes 0 jump ufw6-after-forward
+		counter packets 0 bytes 0 jump ufw6-after-logging-forward
+		counter packets 0 bytes 0 jump ufw6-reject-forward
+		counter packets 0 bytes 0 jump ufw6-track-forward
+	}
+
+	chain ufw6-logging-deny {
+		xt match "conntrack" limit rate 3/minute burst 10 packets counter packets 0 bytes 0 return
+		limit rate 3/minute burst 10 packets counter packets 0 bytes 0 xt target "LOG"
+	}
+
+	chain ufw6-logging-allow {
+		limit rate 3/minute burst 10 packets counter packets 0 bytes 0 xt target "LOG"
+	}
+
+	chain ufw6-skip-to-policy-input {
+		counter packets 0 bytes 0 drop
+	}
+
+	chain ufw6-skip-to-policy-output {
+		counter packets 0 bytes 0 accept
+	}
+
+	chain ufw6-skip-to-policy-forward {
+		counter packets 0 bytes 0 drop
+	}
+
+	chain ufw6-user-input {
+	}
+
+	chain ufw6-user-output {
+	}
+
+	chain ufw6-user-forward {
+	}
+
+	chain ufw6-user-logging-input {
+	}
+
+	chain ufw6-user-logging-output {
+	}
+
+	chain ufw6-user-logging-forward {
+	}
+
+	chain ufw6-user-limit {
+		limit rate 3/minute burst 5 packets counter packets 0 bytes 0 xt target "LOG"
+		counter packets 0 bytes 0 xt target "REJECT"
+	}
+
+	chain ufw6-user-limit-accept {
+		counter packets 0 bytes 0 accept
+	}
+
+	chain amnvpn.anchors {
+		counter packets 8 bytes 1072 jump amnvpn.a.000.allowLoopback
+		counter packets 8 bytes 1072 jump amnvpn.a.310.blockDNS
+		counter packets 8 bytes 1072 jump amnvpn.a.300.allowLAN
+		counter packets 2 bytes 284 jump amnvpn.a.290.allowDHCP
+		counter packets 2 bytes 284 jump amnvpn.a.250.blockIPv6
+		counter packets 2 bytes 284 jump amnvpn.a.200.allowVPN
+		counter packets 2 bytes 284 jump amnvpn.a.130.allowMarkedXray
+		counter packets 2 bytes 284 jump amnvpn.a.400.allowPIA
+		counter packets 2 bytes 284 jump amnvpn.a.100.blockAll
+	}
+
+	chain amnvpn.a.000.allowLoopback {
+		counter packets 8 bytes 1072 jump amnvpn.000.allowLoopback
+	}
+
+	chain amnvpn.000.allowLoopback {
+		oifname "lo*" counter packets 0 bytes 0 accept
+	}
+
+	chain amnvpn.a.310.blockDNS {
+	}
+
+	chain amnvpn.310.blockDNS {
+		udp dport 53 counter packets 0 bytes 0 xt target "REJECT"
+		tcp dport 53 counter packets 0 bytes 0 xt target "REJECT"
+	}
+
+	chain amnvpn.a.300.allowLAN {
+		counter packets 6 bytes 788 jump amnvpn.300.allowLAN
+	}
+
+	chain amnvpn.300.allowLAN {
+		ip6 daddr fc00::/7 counter packets 0 bytes 0 accept
+		ip6 daddr fe80::/10 counter packets 0 bytes 0 accept
+		ip6 daddr ff00::/8 counter packets 6 bytes 788 accept
+	}
+
+	chain amnvpn.a.290.allowDHCP {
+		counter packets 0 bytes 0 jump amnvpn.290.allowDHCP
+	}
+
+	chain amnvpn.290.allowDHCP {
+		ip6 daddr ff00::/8 udp sport 546 udp dport 547 counter packets 0 bytes 0 accept
+	}
+
+	chain amnvpn.a.250.blockIPv6 {
+		counter packets 0 bytes 0 jump amnvpn.250.blockIPv6
+	}
+
+	chain amnvpn.250.blockIPv6 {
+		oifname != "lo*" counter packets 0 bytes 0 xt target "REJECT"
+	}
+
+	chain amnvpn.a.200.allowVPN {
+	}
+
+	chain amnvpn.200.allowVPN {
+		oifname "amn0*" counter packets 0 bytes 0 accept
+		oifname "tun0*" counter packets 0 bytes 0 accept
+		oifname "tun2*" counter packets 0 bytes 0 accept
+	}
+
+	chain amnvpn.a.130.allowMarkedXray {
+		counter packets 0 bytes 0 jump amnvpn.130.allowMarkedXray
+	}
+
+	chain amnvpn.130.allowMarkedXray {
+		meta mark 0x00000082 counter packets 0 bytes 0 accept
+	}
+
+	chain amnvpn.a.400.allowPIA {
+		counter packets 0 bytes 0 jump amnvpn.400.allowPIA
+	}
+
+	chain amnvpn.400.allowPIA {
+	}
+
+	chain amnvpn.a.100.blockAll {
+		counter packets 1 bytes 96 jump amnvpn.100.blockAll
+	}
+
+	chain amnvpn.100.blockAll {
+		counter packets 1 bytes 96 xt target "REJECT"
+	}
+}
+table ip raw {
+	chain amnvpn.anchors {
+		counter packets 1307943 bytes 2441893968 jump amnvpn.a.100.vpnTunOnly
+	}
+
+	chain amnvpn.a.100.vpnTunOnly {
+	}
+
+	chain amnvpn.100.vpnTunOnly {
+		counter packets 0 bytes 0 accept
+	}
+
+	chain PREROUTING {
+		type filter hook prerouting priority raw; policy accept;
+		counter packets 1307943 bytes 2441893968 jump amnvpn.anchors
+	}
+}
+table ip6 raw {
+	chain amnvpn.anchors {
+		counter packets 2 bytes 376 jump amnvpn.a.100.vpnTunOnly
+	}
+
+	chain amnvpn.a.100.vpnTunOnly {
+	}
+
+	chain amnvpn.100.vpnTunOnly {
+		counter packets 0 bytes 0 accept
+	}
+
+	chain PREROUTING {
+		type filter hook prerouting priority raw; policy accept;
+		counter packets 2 bytes 376 jump amnvpn.anchors
+	}
+}
+# Warning: table ip nat is managed by iptables-nft, do not touch!
+table ip nat {
+	chain amnvpn.anchors {
+		counter packets 8322 bytes 1635963 jump amnvpn.a.100.transIp
+	}
+
+	chain amnvpn.a.100.transIp {
+	}
+
+	chain amnvpn.100.transIp {
+		counter packets 0 bytes 0 xt target "MASQUERADE"
+	}
+
+	chain POSTROUTING {
+		type nat hook postrouting priority srcnat; policy accept;
+		counter packets 8322 bytes 1635963 jump amnvpn.anchors
+	}
+}
+# Warning: table ip6 nat is managed by iptables-nft, do not touch!
+table ip6 nat {
+	chain amnvpn.anchors {
+		counter packets 4 bytes 752 jump amnvpn.a.100.transIp
+	}
+
+	chain amnvpn.a.100.transIp {
+	}
+
+	chain amnvpn.100.transIp {
+		counter packets 0 bytes 0 xt target "MASQUERADE"
+	}
+
+	chain POSTROUTING {
+		type nat hook postrouting priority srcnat; policy accept;
+		counter packets 4 bytes 752 jump amnvpn.anchors
+	}
+}
+# Warning: table ip mangle is managed by iptables-nft, do not touch!
+table ip mangle {
+	chain amnvpn.anchors {
+		counter packets 825237 bytes 898134410 jump amnvpn.a.100.tagPkts
+	}
+
+	chain amnvpn.a.100.tagPkts {
+	}
+
+	chain amnvpn.100.tagPkts {
+		xt match "cgroup" counter packets 0 bytes 0 xt target "MARK"
+	}
+
+	chain OUTPUT {
+		type route hook output priority mangle; policy accept;
+		counter packets 825237 bytes 898134410 jump amnvpn.anchors
+	}
+}
+# Warning: table ip6 mangle is managed by iptables-nft, do not touch!
+table ip6 mangle {
+	chain amnvpn.anchors {
+		counter packets 8 bytes 1072 jump amnvpn.a.100.tagPkts
+	}
+
+	chain amnvpn.a.100.tagPkts {
+	}
+
+	chain amnvpn.100.tagPkts {
+		xt match "cgroup" counter packets 0 bytes 0 xt target "MARK"
+	}
+
+	chain OUTPUT {
+		type route hook output priority mangle; policy accept;
+		counter packets 8 bytes 1072 jump amnvpn.anchors
+	}
+}
+=== ACTIVE CONNECTIONS ===
+Netid State      Recv-Q Send-Q     Local Address:Port       Peer Address:Port  Process                              
+udp   UNCONN     0      0              127.0.0.1:48313           0.0.0.0:*                                          
+udp   UNCONN     0      0              127.0.0.1:40719           0.0.0.0:*                                          
+udp   UNCONN     0      0             127.0.0.54:53              0.0.0.0:*                                          
+udp   UNCONN     0      0          127.0.0.53%lo:53              0.0.0.0:*                                          
+udp   ESTAB      0      0      192.168.0.8%wlan0:68          192.168.0.1:67                                         
+udp   UNCONN     0      0                0.0.0.0:5353            0.0.0.0:*                                          
+udp   UNCONN     0      0                0.0.0.0:5353            0.0.0.0:*                                          
+udp   UNCONN     0      0                0.0.0.0:5355            0.0.0.0:*                                          
+udp   UNCONN     0      0                      *:32816                 *:*                                          
+udp   UNCONN     0      0                      *:53643                 *:*                                          
+udp   UNCONN     0      0                   [::]:5353               [::]:*                                          
+tcp   LISTEN     0      4096           127.0.0.1:631             0.0.0.0:*                                          
+tcp   LISTEN     0      4096          127.0.0.54:53              0.0.0.0:*                                          
+tcp   LISTEN     0      4096             0.0.0.0:5355            0.0.0.0:*                                          
+tcp   LISTEN     0      4096       127.0.0.53%lo:53              0.0.0.0:*                                          
+tcp   LISTEN     0      4096           127.0.0.1:44695           0.0.0.0:*                                          
+tcp   TIME-WAIT  0      0              10.33.0.2:60822    X                                        
+tcp   ESTAB      0      0      192.168.0.8%wlan0:52386    X                                        
+tcp   TIME-WAIT  0      0              10.33.0.2:42082    X                                      
+tcp   TIME-WAIT  0      0              10.33.0.2:41246    X                                        
+tcp   TIME-WAIT  0      0              10.33.0.2:47286   X                                        
+tcp   TIME-WAIT  0      0              10.33.0.2:37352    X                                        
+tcp   TIME-WAIT  0      0              10.33.0.2:49678    X                                        
+tcp   TIME-WAIT  0      0              127.0.0.1:32852         127.0.0.1:44695                                      
+tcp   TIME-WAIT  0      0              127.0.0.1:32922         127.0.0.1:44695                                      
+tcp   TIME-WAIT  0      0              127.0.0.1:32936         127.0.0.1:44695                                      
+tcp   TIME-WAIT  0      0              127.0.0.1:33108         127.0.0.1:44695                                      
+tcp   TIME-WAIT  0      0              127.0.0.1:33110         127.0.0.1:44695                                      
+tcp   TIME-WAIT  0      0              10.33.0.2:35080    X                                        
+tcp   TIME-WAIT  0      0              127.0.0.1:36824         127.0.0.1:44695                                      
+tcp   TIME-WAIT  0      0              127.0.0.1:36842         127.0.0.1:44695                                      
+tcp   TIME-WAIT  0      0              10.33.0.2:56718    X                                        
+tcp   TIME-WAIT  0      0              127.0.0.1:37826         127.0.0.1:44695                                      
+tcp   TIME-WAIT  0      0              127.0.0.1:38870         127.0.0.1:44695                                      
+tcp   TIME-WAIT  0      0              10.33.0.2:44130    X                                        
+tcp   CLOSE-WAIT 88     0              10.33.0.2:54638     X    users:(("noctalia",pid=1096,fd=29)) 
+tcp   TIME-WAIT  0      0              127.0.0.1:41388         127.0.0.1:44695                                      
+tcp   TIME-WAIT  0      0              127.0.0.1:49186         127.0.0.1:44695                                      
+tcp   TIME-WAIT  0      0              127.0.0.1:50120         127.0.0.1:44695                                      
+tcp   TIME-WAIT  0      0              10.33.0.2:57324     X                                        
+tcp   TIME-WAIT  0      0              127.0.0.1:52562         127.0.0.1:44695                                      
+tcp   TIME-WAIT  0      0              10.33.0.2:51364   X                                        
+tcp   TIME-WAIT  0      0              127.0.0.1:55296         127.0.0.1:44695                                      
+tcp   TIME-WAIT  0      0              127.0.0.1:55608         127.0.0.1:44695                                      
+tcp   TIME-WAIT  0      0              127.0.0.1:56646         127.0.0.1:44695                                      
+tcp   TIME-WAIT  0      0              127.0.0.1:57296         127.0.0.1:44695                                      
+tcp   ESTAB      0      0              127.0.0.1:57308         127.0.0.1:44695                                      
+tcp   TIME-WAIT  0      0              10.33.0.2:40510    X                                        
+tcp   TIME-WAIT  0      0              10.33.0.2:40526    X                                        
+tcp   ESTAB      0      0              127.0.0.1:44695         127.0.0.1:57308                                      
+tcp   ESTAB      0      0              127.0.0.1:44695         127.0.0.1:60738                                      
+tcp   ESTAB      0      0              127.0.0.1:60738         127.0.0.1:44695                                      
+tcp   TIME-WAIT  0      0              127.0.0.1:60800         127.0.0.1:44695                                      
+tcp   ESTAB      0      0      192.168.0.8%wlan0:37294    X                                        
+tcp   TIME-WAIT  0      0              10.33.0.2:49232    X                                        
+tcp   ESTAB      0      0      192.168.0.8%wlan0:38466    X                                        
+tcp   ESTAB      0      0      192.168.0.8%wlan0:40494    X                                       
+tcp   TIME-WAIT  0      0              10.33.0.2:55918    X                                        
+tcp   LISTEN     0      4096               [::1]:631                [::]:*                                          
+=== PUBLIC IPv4 ===
+X
+=== PUBLIC IPv6 ===

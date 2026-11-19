@@ -1,0 +1,7 @@
+"percent": {
+      "color": {
+        "green": "{{colors.tertiary.default.hex}}",
+        "yellow": "{{colors.primary_fixed_dim.default.hex}}",
+        "red": "{{colors.error.default.hex}}"
+      }
+    }
